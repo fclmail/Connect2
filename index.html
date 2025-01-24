@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Connect Example</title>
     <style>
-        /* Style the page with a dark blue background and centered content */
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -49,7 +48,6 @@
     <h1>Connect Your Wallet</h1>
     <button id="connectWallet">Connect with WalletConnect</button>
     <button id="connectMetaMask">Connect with MetaMask</button>
-    <button id="deepLink">Connect via Deep Link</button>
     <div id="walletInfo"></div>
 
     <!-- Include WalletConnect and Web3.js libraries -->
@@ -57,12 +55,11 @@
     <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
 
     <script>
-        // Wallet Info Div
         const walletInfoDiv = document.getElementById('walletInfo');
         let provider;
 
         /**
-         * Function to display wallet connection status and address
+         * Display the wallet address in the UI
          */
         function displayWalletInfo(address) {
             walletInfoDiv.innerHTML = `
@@ -76,7 +73,7 @@
          */
         document.getElementById('connectWallet').addEventListener('click', async () => {
             try {
-                // Create WalletConnectProvider instance
+                // Initialize WalletConnectProvider
                 provider = new WalletConnectProvider.default({
                     rpc: {
                         137: "https://polygon-mainnet.infura.io/v3/b5fb2feb515a46c0a4b61cd4afbb5d26"
@@ -84,29 +81,27 @@
                     chainId: 137
                 });
 
-                // Enable session (this triggers the QR Code modal)
+                // Enable WalletConnect session
                 await provider.enable();
 
-                // Initialize Web3 instance with provider
+                // Create a new Web3 instance
                 const web3 = new Web3(provider);
 
-                // Get accounts (wallet addresses)
+                // Retrieve wallet address
                 const accounts = await web3.eth.getAccounts();
-                const walletAddress = accounts[0];
+                if (accounts.length === 0) {
+                    throw new Error("No accounts found. Please connect your wallet.");
+                }
 
-                // Store session for redirection persistence
+                const walletAddress = accounts[0];
+                console.log("Wallet Address:", walletAddress);
+
+                // Save wallet connection state
                 sessionStorage.setItem('walletConnected', 'true');
                 sessionStorage.setItem('walletAddress', walletAddress);
 
-                // Display wallet info
+                // Display the wallet address
                 displayWalletInfo(walletAddress);
-
-                // Listen for session disconnection
-                provider.on("disconnect", () => {
-                    sessionStorage.removeItem('walletConnected');
-                    sessionStorage.removeItem('walletAddress');
-                    walletInfoDiv.textContent = "Wallet disconnected.";
-                });
             } catch (error) {
                 console.error("Error connecting via WalletConnect:", error);
                 walletInfoDiv.textContent = "Failed to connect wallet. Please try again.";
@@ -119,15 +114,20 @@
         document.getElementById('connectMetaMask').addEventListener('click', async () => {
             if (typeof window.ethereum !== 'undefined') {
                 try {
-                    // Request accounts from MetaMask
+                    // Request MetaMask accounts
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const walletAddress = accounts[0];
+                    if (accounts.length === 0) {
+                        throw new Error("No accounts found. Please connect your MetaMask wallet.");
+                    }
 
-                    // Store session for redirection persistence
+                    const walletAddress = accounts[0];
+                    console.log("Wallet Address (MetaMask):", walletAddress);
+
+                    // Save wallet connection state
                     sessionStorage.setItem('walletConnected', 'true');
                     sessionStorage.setItem('walletAddress', walletAddress);
 
-                    // Display wallet info
+                    // Display the wallet address
                     displayWalletInfo(walletAddress);
                 } catch (error) {
                     console.error("Error connecting with MetaMask:", error);
@@ -139,16 +139,7 @@
         });
 
         /**
-         * Connect via Deep Link
-         */
-        document.getElementById('deepLink').addEventListener('click', () => {
-            // Open WalletConnect-compatible wallet using deep link
-            const deepLinkUrl = "https://walletconnect.org/wallets";
-            window.open(deepLinkUrl, '_blank');
-        });
-
-        /**
-         * Check for existing session on page load
+         * Restore wallet session on page load
          */
         window.addEventListener('load', () => {
             const isConnected = sessionStorage.getItem('walletConnected');
