@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WalletConnect Example</title>
+    <style>
+        /* Style the page with a dark blue background and centered content */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #001f3f; /* Dark blue background */
+            color: #ffffff; /* White text for contrast */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #walletInfo {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            word-break: break-word; /* Ensure long wallet addresses wrap */
+        }
+    </style>
+</head>
+<body>
+    <h1>Connect Your Wallet</h1>
+    <button id="connectWallet">Connect Wallet</button>
+    <div id="walletInfo"></div>
+
+    <!-- Include WalletConnect and Web3.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+
+    <script>
+        // WalletConnect setup
+        const connectWalletButton = document.getElementById('connectWallet');
+        const walletInfoDiv = document.getElementById('walletInfo');
+
+        connectWalletButton.addEventListener('click', async () => {
+            try {
+                // Create a WalletConnectProvider instance
+                const provider = new WalletConnectProvider.default({
+                    rpc: {
+                        137: "https://polygon-mainnet.infura.io/v3/b5fb2feb515a46c0a4b61cd4afbb5d26" // Polygon Mainnet RPC URL
+                    },
+                    chainId: 137 // Polygon Mainnet Chain ID
+                });
+
+                // Trigger the QR Code modal to connect
+                await provider.enable();
+
+                // Initialize Web3 with the provider
+                const web3 = new Web3(provider);
+
+                // Get accounts (wallet addresses) from the connected wallet
+                const accounts = await web3.eth.getAccounts();
+                const walletAddress = accounts[0];
+
+                // Display wallet address on the page
+                walletInfoDiv.innerHTML = `
+                    <p>Wallet Connected:</p>
+                    <p>Address: ${walletAddress}</p>
+                `;
+
+                // Log wallet address for debugging
+                console.log("Connected Wallet Address:", walletAddress);
+            } catch (error) {
+                console.error("Error connecting wallet:", error);
+                walletInfoDiv.textContent = "Failed to connect wallet. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>
