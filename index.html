@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WalletConnect Example</title>
+    <title>Wallet Connect Example</title>
     <style>
         /* Style the page with a dark blue background and centered content */
         body {
@@ -31,6 +31,7 @@
             font-size: 1rem;
             border-radius: 5px;
             cursor: pointer;
+            margin: 5px 0;
         }
 
         button:hover {
@@ -46,7 +47,9 @@
 </head>
 <body>
     <h1>Connect Your Wallet</h1>
-    <button id="connectWallet">Connect Wallet</button>
+    <button id="connectWallet">Connect with WalletConnect</button>
+    <button id="connectMetaMask">Connect with MetaMask</button>
+    <button id="deepLink">Connect via Deep Link</button>
     <div id="walletInfo"></div>
 
     <!-- Include WalletConnect and Web3.js libraries -->
@@ -54,41 +57,105 @@
     <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
 
     <script>
-        // WalletConnect setup
-        const connectWalletButton = document.getElementById('connectWallet');
+        // Wallet Info Div
         const walletInfoDiv = document.getElementById('walletInfo');
+        let provider;
 
-        connectWalletButton.addEventListener('click', async () => {
+        /**
+         * Function to display wallet connection status and address
+         */
+        function displayWalletInfo(address) {
+            walletInfoDiv.innerHTML = `
+                <p>Wallet Connected:</p>
+                <p>Address: ${address}</p>
+            `;
+        }
+
+        /**
+         * Connect with WalletConnect
+         */
+        document.getElementById('connectWallet').addEventListener('click', async () => {
             try {
-                // Create a WalletConnectProvider instance
-                const provider = new WalletConnectProvider.default({
+                // Create WalletConnectProvider instance
+                provider = new WalletConnectProvider.default({
                     rpc: {
-                        137: "https://polygon-mainnet.infura.io/v3/b5fb2feb515a46c0a4b61cd4afbb5d26" // Polygon Mainnet RPC URL
+                        137: "https://polygon-mainnet.infura.io/v3/b5fb2feb515a46c0a4b61cd4afbb5d26"
                     },
-                    chainId: 137 // Polygon Mainnet Chain ID
+                    chainId: 137
                 });
 
-                // Trigger the QR Code modal to connect
+                // Enable session (this triggers the QR Code modal)
                 await provider.enable();
 
-                // Initialize Web3 with the provider
+                // Initialize Web3 instance with provider
                 const web3 = new Web3(provider);
 
-                // Get accounts (wallet addresses) from the connected wallet
+                // Get accounts (wallet addresses)
                 const accounts = await web3.eth.getAccounts();
                 const walletAddress = accounts[0];
 
-                // Display wallet address on the page
-                walletInfoDiv.innerHTML = `
-                    <p>Wallet Connected:</p>
-                    <p>Address: ${walletAddress}</p>
-                `;
+                // Store session for redirection persistence
+                sessionStorage.setItem('walletConnected', 'true');
+                sessionStorage.setItem('walletAddress', walletAddress);
 
-                // Log wallet address for debugging
-                console.log("Connected Wallet Address:", walletAddress);
+                // Display wallet info
+                displayWalletInfo(walletAddress);
+
+                // Listen for session disconnection
+                provider.on("disconnect", () => {
+                    sessionStorage.removeItem('walletConnected');
+                    sessionStorage.removeItem('walletAddress');
+                    walletInfoDiv.textContent = "Wallet disconnected.";
+                });
             } catch (error) {
-                console.error("Error connecting wallet:", error);
+                console.error("Error connecting via WalletConnect:", error);
                 walletInfoDiv.textContent = "Failed to connect wallet. Please try again.";
+            }
+        });
+
+        /**
+         * Connect with MetaMask
+         */
+        document.getElementById('connectMetaMask').addEventListener('click', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // Request accounts from MetaMask
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const walletAddress = accounts[0];
+
+                    // Store session for redirection persistence
+                    sessionStorage.setItem('walletConnected', 'true');
+                    sessionStorage.setItem('walletAddress', walletAddress);
+
+                    // Display wallet info
+                    displayWalletInfo(walletAddress);
+                } catch (error) {
+                    console.error("Error connecting with MetaMask:", error);
+                    walletInfoDiv.textContent = "Failed to connect with MetaMask. Please try again.";
+                }
+            } else {
+                walletInfoDiv.textContent = "MetaMask not found. Please install MetaMask and try again.";
+            }
+        });
+
+        /**
+         * Connect via Deep Link
+         */
+        document.getElementById('deepLink').addEventListener('click', () => {
+            // Open WalletConnect-compatible wallet using deep link
+            const deepLinkUrl = "https://walletconnect.org/wallets";
+            window.open(deepLinkUrl, '_blank');
+        });
+
+        /**
+         * Check for existing session on page load
+         */
+        window.addEventListener('load', () => {
+            const isConnected = sessionStorage.getItem('walletConnected');
+            const walletAddress = sessionStorage.getItem('walletAddress');
+
+            if (isConnected && walletAddress) {
+                displayWalletInfo(walletAddress);
             }
         });
     </script>
